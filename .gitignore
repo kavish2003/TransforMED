@@ -1,0 +1,43 @@
+# Ignore file extensions
+*.conll
+*.tsv
+*.io
+
+# Virtual environment
+transformedenv/
+
+# Ignore Python bytecode files
+__pycache__/
+
+# Ignore compiled Python files
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore directories that should not be tracked
+data/
+output/
+runs/
+libs/
+
+# Ignore common IDE/editor files
+.vscode/
+.idea/
+
+# macOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+
+# Log files
+*.log
+
+# Test and coverage reports
+*.coverage
+*.tox/
+*.nox/
+*.coverage.*
+nosetests.xml
+coverage.xml
+*.hypothesis/

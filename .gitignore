@@ -1,7 +1,7 @@
 # Ignore file extensions
-*.conll
-*.tsv
-*.io
+# *.conll
+# *.tsv
+# *.io
 
 # Virtual environment
 transformedenv/
@@ -15,7 +15,7 @@ __pycache__/
 *.pyd
 
 # Ignore directories that should not be tracked
-data/
+# data/
 output/
 runs/
 libs/

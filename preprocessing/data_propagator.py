@@ -133,12 +133,8 @@ def propagate_data(data_dir,model_dir,data_part_directory,gold_name_relations,go
 def main():
     data_dir = '../data/'
     model_dir = '../output/seqtag128_testout/'
-<<<<<<< HEAD
-    dirs = ['neoplasm', 'glaucoma_test', 'mixed_test']
-=======
     # dirs = ['neoplasm', 'glaucoma_test', 'mixed_test']
     dirs = ['neoplasm']
->>>>>>> 5d8837ab (Initial commit)
     # predicted_files = 'sequence_tagging_preddictions_'
     gold_files_relations = 'test_relations.tsv'
     gold_files_am = 'test_agg.conll'

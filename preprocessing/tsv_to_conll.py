@@ -18,17 +18,12 @@ def bert_transfomer(sentence,pico,tokenizer):
 
 def transform_file(filename):
     print('Transforming: ' + filename)
-<<<<<<< HEAD
-    output_dir = filename.split('.')[0]+'_for_ner.io'
-    with open(filename , 'r') as f:
-=======
     # Correct the output filename to include the expected suffix
     base_name = os.path.splitext(filename)[0]
     print(filename)
     print("new"+base_name)
     output_dir = f"{base_name}_for_ner.iopico.conll"  # Updated line
     with open(filename, 'r') as f:
->>>>>>> 5d8837ab (Initial commit)
         data = f.readlines()
         rc_data = []
         for line in data:
@@ -36,11 +31,7 @@ def transform_file(filename):
             label = line[0]
             sent_a = line[1]
             sent_b = line[2]
-<<<<<<< HEAD
-            rc_data.append([sent_a,sent_b,label])
-=======
             rc_data.append([sent_a, sent_b, label])
->>>>>>> 5d8837ab (Initial commit)
 
     new_data = []
     for data in rc_data:
@@ -49,19 +40,13 @@ def transform_file(filename):
         new_data.append(sentence_a)
         new_data.append(sentence_b)
 
-<<<<<<< HEAD
-    print("Saving at: "+ output_dir)
-=======
     print("Saving at: " + output_dir)
->>>>>>> 5d8837ab (Initial commit)
     with open(output_dir, 'w') as f:
         for data in new_data:
             for entry in data:
                 f.write(' '.join([entry, 'POS', 'N\n']))
             f.write('\n')
 
-<<<<<<< HEAD
-=======
 # def transform_file(filename):
 #     print('Transforming: ' + filename)
 #     # output_dir = filename.split('.')[0]+'_for_ner.io'
@@ -91,7 +76,6 @@ def transform_file(filename):
 #                 f.write(' '.join([entry, 'POS', 'N\n']))
 #             f.write('\n')
 
->>>>>>> 5d8837ab (Initial commit)
 def convert_to_tsv(filename):
     root = filename.split('_for_ner.iopico.conll')[0]
     original = root+'_for_ner.io'
@@ -158,21 +142,6 @@ def convert_to_tsv(filename):
 
 def main():
     files = [
-<<<<<<< HEAD
-        '/data/neoplasm/train_relations.tsv',
-        '/data/neoplasm/dev_relations.tsv',
-        '/data/neoplasm/test_relations.tsv',
-        '/data/glaucoma_test/test_relations.tsv',
-        '/data/mixed_test/test_relations.tsv'
-    ]
-
-    end_files = [
-        '/data/neoplasm/train_relations_for_ner.iopico.conll',
-        '/data/neoplasm/dev_relations_for_ner.iopico.conll',
-        '/data/neoplasm/test_relations_for_ner.iopico.conll',
-        '/data/glaucoma_test/test_relations_for_ner.iopico.conll',
-        '/data/mixed_test/test_relations_for_ner.iopico.conll'
-=======
         '../data/neoplasm/train_relations.tsv',
         '../data/neoplasm/dev_relations.tsv',
         '../data/neoplasm/test_relations.tsv',
@@ -186,7 +155,6 @@ def main():
         '../data/neoplasm/test_relations_for_ner.iopico.conll',
         '../data/glaucoma_test/test_relations_for_ner.iopico.conll',
         '../data/mixed_test/test_relations_for_ner.iopico.conll'
->>>>>>> 5d8837ab (Initial commit)
     ]
 
     root = os.getcwd()

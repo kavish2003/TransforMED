@@ -324,9 +324,12 @@ def evaluate(args, model, tokenizer, prefix=""):
                     print("\nDEBUG - Batch predictions:")
                     print(f"Logits shape: {logits.shape}")
                     print(f"Labels shape: {labels.shape}")
-                    
+                    print(f"Logits: {logits}")
+
                     # Get predictions
                     batch_preds = np.argmax(logits, axis=2)
+                    print(f"Batch predictions: {batch_preds}")
+                    print(f"Batch predictions shape: {batch_preds.shape}")
                     print(f"Unique predictions in batch: {np.unique(batch_preds, return_counts=True)}")
                     
                     try:

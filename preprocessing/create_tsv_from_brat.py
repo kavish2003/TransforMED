@@ -191,18 +191,6 @@ def create_tsv_for_multiple_choice(input_dir, output_file, num_of_choices=5):
 def main():
     #need to pick dataset split and output destination first. 
 
-<<<<<<< HEAD
-    #input_dir = '../data/glaucoma_test/glaucoma/'
-    # input_dir = '../data/neoplasm/neo_test/'
-    # input_dir = '../data/glaucoma_test/'
-    
-    #output = '../data/glaucoma'
-    # output = '../data/neoplasm/test_relations'
-    # output = '../data/glaucoma_test/test_relations'
-
-    create_tsv_for_relation_classification(input_dir, output)
-    create_tsv_for_relation_classification(input_dir, output)
-=======
     # input_dir = '../data/mixed_test/mixed_test/'
     input_dir = '../data/neoplasm/neoplasm_train/'
     # input_dir = '../data/glaucoma_test/'
@@ -213,7 +201,6 @@ def main():
 
     create_tsv_for_relation_classification(input_dir, output)
     # create_tsv_for_relation_classification(input_dir, output)
->>>>>>> 5d8837ab (Initial commit)
     #create_tsv_for_multiple_choice(input_dir, output)
 
 if __name__ == "__main__":

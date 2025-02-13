@@ -125,7 +125,8 @@ class ExtendedBertTokenizer(BertTokenizer):
                         y_pred.append(processor.convert_ids_to_labels([int(label_ids[i][j])])[0])
                     else:
                         y_pred.append(label_ids[i][j])
-
+                    logger.debug(f"Predicted label IDs: {label_ids[i]}")
+                    logger.debug(f"Converted labels: {y_pred}")
                     sentence.append(token)
 
                 if gold_label is not None:

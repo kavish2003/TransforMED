@@ -5,6 +5,8 @@ import collections
 import torch
 from torch.utils.data import TensorDataset
 from transformers import BasicTokenizer
+import logging
+logger = logging.getLogger(__name__)
 
 class MultiChoiceExample(object):
     """A single training/test example for the SWAG dataset."""
@@ -725,80 +727,269 @@ class ArgMinPicoSecTagProcessor(PicoDataProcessor):
             examples.append(
                 InputExample(guid=guid, text_a=text_a, text_b=None, pico = None, labels=labels))
         return examples
-
+    
 class ArgMinSeqTagProcessor(DataProcessor):
-    """Processor for RCT data set (CoNLL format)"""
-
+    """
+    Processor for argumentation mining sequence tagging task
+    Created: 2025-02-16 19:35:31 UTC
+    Author: kavish2003
+    """
+    
     def __init__(self):
-        # self.labels = ["X", "B-Claim", "I-Claim", "B-Premise", "I-Premise", 'O']
-        self.labels = ["X", "I-Claim", "I-Premise", 'O'] #less labels
+        # Define labels in proper order for CRF
+        self.labels = ["O", "I-Claim", "B-Claim", "X"]  # 4 labels total
         self.pico_labels = ["X", "N", "1_i", "1_o", "1_p"]
-        self.label_map = self._create_label_map(self.labels)
-        self.pico_label_map = self._create_label_map(self.pico_labels)
-        self.replace_labels = {
-            'B-MajorClaim':'B-Claim',
-            'I-MajorClaim': 'I-Claim',
+        
+        # Create label mappings
+        self.label_map = {
+            "O": 0,
+            "I-Claim": 1,
+            "B-Claim": 2,
+            "X": 3,
+            # Map other labels to these basic categories
+            "I-MajorClaim": 1,  # Map to I-Claim
+            "B-MajorClaim": 2,  # Map to B-Claim
+            "I-Premise": 1,     # Map to I-Claim
+            "B-Premise": 2,     # Map to B-Claim
+            "[CLS]": 3,
+            "[SEP]": 3,
+            "PAD": 0
+        }
+        
+        self.pico_label_map = {
+            "X": 0,
+            "N": 1,
+            "1_i": 2,
+            "1_o": 3,
+            "1_p": 4,
+            "[CLS]": 0,
+            "[SEP]": 0,
+            "PAD": 0
         }
 
-
-    def _create_label_map(self, labels):
-        label_map = collections.OrderedDict()
-        for i, label in enumerate(labels):
-            label_map[label] = i
-        return label_map
-
     def get_train_examples(self, data_dir):
-        """See base class."""
+        """Gets a collection of `InputExample`s for the train set."""
         return self._create_examples(
-            # self._read_conll(os.path.join(data_dir, "train.conll"), replace=self.replace_labels), "train")
-            self._read_conll(os.path.join(data_dir, "train_agg.conll"), label_column=3, replace=self.replace_labels), "train")
+            self._read_conll(os.path.join(data_dir, "train_agg.conll")), 
+            "train"
+        )
 
     def get_dev_examples(self, data_dir):
-        """See base class."""
+        """Gets a collection of `InputExample`s for the dev set."""
         return self._create_examples(
-            # self._read_conll(os.path.join(data_dir, "dev.conll"), replace=self.replace_labels), "dev")
-            self._read_conll(os.path.join(data_dir, "dev_agg.conll"), label_column=3, replace=self.replace_labels), "dev")
+            self._read_conll(os.path.join(data_dir, "dev_agg.conll")),
+            "dev"
+        )
 
-    def get_test_examples(self, data_dir, setname="test_agg.conll"):
-        """See base class."""
+    def get_test_examples(self, data_dir):
+        """Gets a collection of `InputExample`s for the test set."""
         return self._create_examples(
-            # self._read_conll(os.path.join(data_dir, setname), replace=self.replace_labels), "test")
-            self._read_conll(os.path.join(data_dir, setname), label_column=3, replace=self.replace_labels),
-            "test")
+            self._read_conll(os.path.join(data_dir, "test_agg.conll")),
+            "test"
+        )
 
     def get_labels(self):
-        """ See base class."""
+        """Gets the list of labels."""
         return self.labels
 
-    def convert_labels_to_ids(self, labels):
-        idx_list = []
-        for label in labels:
-            idx_list.append(self.label_map[label])
-        return idx_list
+    def get_pico_labels(self):
+        """Gets the list of PICO labels."""
+        return self.pico_labels
 
-    def convert_pico_to_ids(self, pico):
-        idx_list = []
-        for l in pico:
-            idx_list.append(self.pico_label_map[l])
-        return idx_list
+    def _read_conll(self, filepath):
+        """
+        Reads a CONLL formatted file
+        Args:
+            filepath: Path to the file
+        Returns:
+            List of [tokens, pico_labels, labels] lists
+        """
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"CoNLL file not found at: {filepath}")
 
-    def convert_ids_to_labels(self, idx_list):
-        labels_list = []
-        for idx in idx_list:
-            labels_list.append([key for key in self.label_map.keys() if self.label_map[key] == idx][0])
-        return labels_list
+        logger.info(f"Reading CONLL file: {filepath}")
+        
+        sentences = []
+        current_tokens = []
+        current_pico = []
+        current_labels = []
+        
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                
+                if not line or line.startswith("-DOCSTART-"):
+                    if current_tokens:
+                        sentences.append([
+                            current_tokens,
+                            current_pico,
+                            current_labels
+                        ])
+                        current_tokens = []
+                        current_pico = []
+                        current_labels = []
+                    continue
 
-    def _create_examples(self, lines, set_type):
-        """Creates examples for the training and dev sets."""
+                # Split by tab or multiple spaces
+                parts = line.split('\t') if '\t' in line else line.split()
+                
+                if len(parts) >= 4:  # Format: index token pico label
+                    token = parts[1]  # Token is in second column
+                    pico = parts[2]   # PICO label is in third column
+                    label = parts[3]  # Sequence label is in fourth column
+                    
+                    current_tokens.append(token)
+                    current_pico.append(pico)
+                    current_labels.append(label)
+
+        # Add the last sentence if it exists
+        if current_tokens:
+            sentences.append([
+                current_tokens,
+                current_pico,
+                current_labels
+            ])
+
+        logger.info(f"Read {len(sentences)} sentences from {filepath}")
+        return sentences
+
+    def _create_examples(self, sentences, set_type):
+        """
+        Creates examples for the training, dev and test sets.
+        Args:
+            sentences: List of [tokens, pico_labels, labels] lists
+            set_type: train, dev, or test
+        """
         examples = []
-        for (i, line) in enumerate(lines):
-            guid = "%s-%s" % (set_type, str(i))
-            text_a = line[0]
-            pico = line[1]
-            labels = line[-1]
+        for (i, sentence) in enumerate(sentences):
+            guid = f"{set_type}-{i}"
+            tokens = sentence[0]
+            pico = sentence[1]
+            labels = sentence[2]
+
+            # Verify lengths match
+            if not (len(tokens) == len(pico) == len(labels)):
+                logger.warning(f"Skipping malformed sentence {guid}: length mismatch")
+                continue
+
             examples.append(
-                InputExample(guid=guid, text_a=text_a, text_b=None, pico = pico, labels=labels))
+                InputExample(
+                    guid=guid,
+                    text_a=tokens,
+                    text_b=None,
+                    pico=pico,
+                    labels=labels
+                )
+            )
+
+            if i < 2:  # Debug first two examples
+                logger.info(f"\nExample {guid}:")
+                logger.info(f"Tokens: {tokens[:5]}...")
+                logger.info(f"PICO: {pico[:5]}...")
+                logger.info(f"Labels: {labels[:5]}...")
+
         return examples
+
+    def convert_examples_to_features(self, examples, max_seq_length, tokenizer,
+                                   logger=None, forSequenceTagging=True,
+                                   min_seq_length=None):
+        """Converts examples to features suitable for model input."""
+        features = []
+        for (ex_index, example) in enumerate(examples):
+            tokens = example.text_a
+            pico_labels = example.pico
+            labels = example.labels
+            
+            # Tokenize and align labels
+            all_subtokens = []
+            all_pico_labels = []
+            all_labels = []
+            
+            for idx, (token, pico, label) in enumerate(zip(tokens, pico_labels, labels)):
+                subtokens = tokenizer.tokenize(token)
+                if not subtokens:
+                    subtokens = [token]
+                
+                all_subtokens.extend(subtokens)
+                
+                # Handle PICO labels for subtokens
+                all_pico_labels.extend([pico] * len(subtokens))
+                
+                # Handle sequence labels for subtokens
+                if len(subtokens) == 1:
+                    # Single token
+                    if idx == 0 or labels[idx-1] == "O":  # Start of sequence or after O
+                        if label.startswith("I-"):
+                            all_labels.append("B-" + label[2:])
+                        else:
+                            all_labels.append(label)
+                    else:
+                        all_labels.append(label)
+                else:
+                    # Multiple subtokens
+                    if label.startswith("B-") or (label.startswith("I-") and (idx == 0 or labels[idx-1] == "O")):
+                        all_labels.append("B-" + label[2:])
+                        all_labels.extend(["I-" + label[2:]] * (len(subtokens) - 1))
+                    else:
+                        all_labels.extend([label] * len(subtokens))
+            
+            # Truncate if needed
+            if len(all_subtokens) > max_seq_length - 2:  # Account for [CLS] and [SEP]
+                all_subtokens = all_subtokens[:(max_seq_length - 2)]
+                all_pico_labels = all_pico_labels[:(max_seq_length - 2)]
+                all_labels = all_labels[:(max_seq_length - 2)]
+            
+            # Add [CLS] and [SEP]
+            tokens = ["[CLS]"] + all_subtokens + ["[SEP]"]
+            pico_labels = ["X"] + all_pico_labels + ["X"]
+            labels = ["[CLS]"] + all_labels + ["[SEP]"]
+            
+            # Convert to ids
+            input_ids = tokenizer.convert_tokens_to_ids(tokens)
+            pico_ids = [self.pico_label_map.get(p, self.pico_label_map["X"]) for p in pico_labels]
+            label_ids = [self.label_map.get(l, self.label_map["O"]) for l in labels]
+            
+            # Create attention mask and segment ids
+            input_mask = [1] * len(input_ids)
+            segment_ids = [0] * len(input_ids)
+            
+            # Zero-pad up to the sequence length
+            padding_length = max_seq_length - len(input_ids)
+            
+            input_ids += [0] * padding_length
+            input_mask += [0] * padding_length
+            segment_ids += [0] * padding_length
+            label_ids += [self.label_map["PAD"]] * padding_length
+            pico_ids += [self.pico_label_map["PAD"]] * padding_length
+
+            assert len(input_ids) == max_seq_length
+            assert len(input_mask) == max_seq_length
+            assert len(segment_ids) == max_seq_length
+            assert len(label_ids) == max_seq_length
+            assert len(pico_ids) == max_seq_length
+
+            if ex_index < 5 and logger:
+                logger.info("*** Example ***")
+                logger.info("guid: %s" % example.guid)
+                logger.info("tokens: %s" % " ".join([str(x) for x in tokens]))
+                logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
+                logger.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
+                logger.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
+                logger.info("label_ids: %s" % " ".join([str(x) for x in label_ids]))
+                logger.info("pico_ids: %s" % " ".join([str(x) for x in pico_ids]))
+
+            features.append(
+                InputFeatures(
+                    input_ids=input_ids,
+                    input_mask=input_mask,
+                    segment_ids=segment_ids,
+                    pico_ids=pico_ids,
+                    pico_segment_ids=segment_ids,
+                    label_ids=label_ids
+                )
+            )
+
+        return features
 
 class ArgMinRelClassProcessor(DataProcessor):
     """Processor for the RCT data set (for training)."""
